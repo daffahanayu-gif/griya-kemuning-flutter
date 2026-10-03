@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../models/room_model.dart';
 import '../../providers/dummy/room_data.dart';
 import 'roomdetail_page.dart';
+import '../../service/api_service.dart';
 
 class KamarPage extends StatefulWidget {
   const KamarPage({super.key});
@@ -62,93 +63,129 @@ class _KamarPageState extends State<KamarPage> {
 
           // List View Kamar dengan Gambar
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: filteredRooms.length,
-              itemBuilder: (context, index) {
-                final room = filteredRooms[index];
-                return Card(
-                  color: const Color(0xFF1A222D),
-                  margin: const EdgeInsets.only(bottom: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  child: InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => RoomDetailPage(room: room),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          // Gambar Kamar
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.asset(
-                              'assets/kamarkemuning.jpg.jpeg',
-                              width: 80,
-                              height: 80,
-                              fit: BoxFit.cover,
-                              errorBuilder: (ctx, err, stack) => Container(
-                                width: 80,
-                                height: 80,
-                                color: Colors.grey[800],
-                                child: const Icon(Icons.king_bed, color: Colors.white54, size: 40),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
+            child: FutureBuilder<List<dynamic>>(
+              future: ApiService.fetchKamar(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Gagal memuat data: ${snapshot.error}',
+                        style: const TextStyle(color: Colors.white)),
+                  );
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Text('Belum ada data kamar',
+                        style: TextStyle(color: Colors.white)),
+                  );
+                }
 
-                          // Informasi Kamar
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  room.name,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  room.isAvailable ? 'Rp ${room.price} / bulan' : 'Penghuni: ${room.penghuni}',
-                                  style: const TextStyle(color: Colors.white70, fontSize: 13),
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: room.isAvailable ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: Text(
-                                    room.isAvailable ? 'Kosong' : 'Terisi',
-                                    style: TextStyle(
-                                      color: room.isAvailable ? Colors.green : Colors.orange,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const Icon(Icons.arrow_forward_ios, color: Colors.white24, size: 16),
-                        ],
+                final rooms = snapshot.data!;
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: rooms.length,
+                  itemBuilder: (context, index) {
+                    final room = rooms[index];
+                    final isAvailable = room['status'] == 'Tersedia';
+
+                    return Card(
+                      color: const Color(0xFF1A222D),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ),
-                  ),
+                      child: InkWell(
+                        onTap: () {
+                          // Konversi data map ke RoomModel jika RoomDetailPage butuh RoomModel
+                          // atau passing langsung variabel room-nya
+                        },
+                        borderRadius: BorderRadius.circular(12),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Row(
+                            children: [
+                              // Gambar Kamar
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.asset(
+                                  'assets/kamarkemuning.jpg.jpeg',
+                                  width: 80,
+                                  height: 80,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (ctx, err, stack) => Container(
+                                    width: 80,
+                                    height: 80,
+                                    color: Colors.grey[800],
+                                    child: const Icon(Icons.king_bed,
+                                        color: Colors.white54, size: 40),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              // Detail Teks Kamar dari Database MySQL
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      room['nomor'] ?? '',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Rp ${room['harga']}',
+                                      style: const TextStyle(
+                                        color: Colors.amber,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      room['deskripsi'] ?? '',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Colors.white70,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              // Status Badge (Tersedia / Terisi)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isAvailable
+                                      ? Colors.green.withOpacity(0.2)
+                                      : Colors.red.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  room['status'] ?? '',
+                                  style: TextStyle(
+                                    color: isAvailable ? Colors.green : Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
                 );
               },
             ),
-          ),
+          )
         ],
       ),
     );

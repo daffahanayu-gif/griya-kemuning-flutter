@@ -7,6 +7,7 @@ import 'login_page.dart';
 import 'roomdetail_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '/widgets/room_card.dart';
+import '../../service/api_service.dart';
 
 // 1. WIDGET UTAMA (Membungkus Bottom Navigation Bar)
 class HomePage extends StatefulWidget {
@@ -207,26 +208,62 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
             ),
             const SizedBox(height: 12),
 
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: filteredRooms.length,
-              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: isDesktop ? 4 : 2,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                childAspectRatio: isDesktop ? 1.4 : 0.85, // Ratio disesuaikan agar Foto Muat
-              ),
-              itemBuilder: (context, index) {
-                final room = filteredRooms[index];
-               return RoomCard(
-                      room: room,
+            FutureBuilder<List<dynamic>>(
+              future: ApiService.fetchKamar(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Gagal memuat kamar: ${snapshot.error}',
+                        style: const TextStyle(color: Colors.white)),
+                  );
+                } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Text('Belum ada data kamar',
+                        style: TextStyle(color: Colors.white)),
+                  );
+                }
+
+                final rooms = snapshot.data!;
+                
+                // Filter berdasarkan dropdown jika memilih selain 'Semua'
+                final filtered = rooms.where((r) {
+                  if (_selectedFilter == 'Terisi') return r['status'] == 'Terisi';
+                  if (_selectedFilter == 'Kosong') return r['status'] == 'Tersedia';
+                  return true;
+                }).toList();
+
+                return GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filtered.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: isDesktop ? 4 : 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: isDesktop ? 1.4 : 0.85,
+                  ),
+                  itemBuilder: (context, index) {
+                    final room = filtered[index];
+                    // Konversi map API ke RoomModel sederhana jika widget RoomCard butuh object RoomModel
+                    final roomModel = RoomModel(
+                      id: room['id'].toString(),
+                      name: room['nomor'],
+                      price: 'Rp ${room['harga']}',
+                      isAvailable: room['status'] == 'Tersedia',
+                    );
+
+                    return RoomCard(
+                      room: roomModel,
                       onStatusChanged: () {
-                        setState(() {}); // Refresh GridView jika status kamar diubah
+                        setState(() {});
                       },
                     );
                   },
-                ),
+                );
+              },
+            ),
 
             // ================= 3. DAFTAR TAGIHAN & WA =================
             const Text(
@@ -234,31 +271,67 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
               style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: rooms.where((r) => !r.isAvailable).length,
-              itemBuilder: (context, index) {
-                final occupiedRooms = rooms.where((r) => !r.isAvailable).toList();
-                final room = occupiedRooms[index];
-                return Card(
-                  color: const Color(0xFF1A222D),
-                  margin: const EdgeInsets.only(bottom: 10),
-                  child: ListTile(
-                    leading: const Icon(Icons.receipt_long, color: Colors.orange),
-                    title: Text('${room.penghuni} (${room.name})', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    subtitle: Text('Nominal: Rp ${room.price} | Jatuh Tempo: Tanggal 10', style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                    trailing: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green.withOpacity(0.2),
-                        foregroundColor: Colors.green,
-                        elevation: 0,
+           FutureBuilder<List<dynamic>>(
+              future: ApiService.fetchPenghuniKamar(), // Pastikan method ini ada di ApiService
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Text('Gagal memuat tagihan: ${snapshot.error}',
+                        style: const TextStyle(color: Colors.white)),
+                  );
+                }
+
+                // Filter hanya kamar yang 'Terisi' (punya penghuni)
+                final occupied = (snapshot.data ?? [])
+                    .where((r) => r['status'] == 'Terisi')
+                    .toList();
+
+                if (occupied.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    child: Text('Tidak ada tagihan aktif',
+                        style: TextStyle(color: Colors.white70)),
+                  );
+                }
+
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: occupied.length,
+                  itemBuilder: (context, index) {
+                    final item = occupied[index];
+                    return Card(
+                      color: const Color(0xFF1A222D),
+                      margin: const EdgeInsets.only(bottom: 10),
+                      child: ListTile(
+                        leading: const Icon(Icons.receipt_long, color: Colors.orange),
+                        title: Text(
+                          '${item['nama_penghuni']} (${item['nomor_kamar']})',
+                          style: const TextStyle(
+                              color: Colors.white, fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'Nominal: Rp ${item['harga']} | Jatuh Tempo: Tanggal 10',
+                          style: const TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                        trailing: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green.withOpacity(0.2),
+                            foregroundColor: Colors.green,
+                            elevation: 0,
+                          ),
+                          icon: const Icon(Icons.chat, size: 16),
+                          label: const Text('Kirim WA'),
+                          onPressed: () => _showWADialog(
+                            item['nama_penghuni'],
+                            item['nomor_kamar'],
+                          ),
+                        ),
                       ),
-                      icon: const Icon(Icons.chat, size: 16),
-                      label: const Text('Kirim WA'),
-                      onPressed: () => _showWADialog(room.penghuni ?? '-', room.name),
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             ),
