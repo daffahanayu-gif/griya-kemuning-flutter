@@ -8,6 +8,7 @@ import 'roomdetail_page.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '/widgets/room_card.dart';
 import '../../service/api_service.dart';
+import '/views/admin/reservasi.dart'; // Sesuaikan lokasi path file reservasi_page.dart kamu
 
 // 1. WIDGET UTAMA (Membungkus Bottom Navigation Bar)
 class HomePage extends StatefulWidget {
@@ -159,6 +160,16 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
         elevation: 0,
         title: const Text('Dashboard Kos', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications_active, color: Colors.amber),
+            tooltip: 'Persetujuan Reservasi',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ReservasiPage()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.redAccent),
             onPressed: () {

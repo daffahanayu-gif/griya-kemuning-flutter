@@ -6,7 +6,8 @@ class ApiService {
   // - Jika pakai Web / Windows App: 'http://localhost:3000/api'
   // - Jika pakai Android Emulator: 'http://10.0.2.2:3000/api'
   // - Jika pakai HP Fisik via WiFi: 'http://IP_LAPTOP_KAMU:3000/api'
-  static const String baseUrl = 'http://localhost:3000/api';
+  static const String baseUrl = 'https://griya-kemuning-flutter.vercel.app/api';
+  
 
   // Fetch daftar kamar dari MySQL
   static Future<List<dynamic>> fetchKamar() async {
@@ -30,4 +31,31 @@ class ApiService {
       throw Exception('Gagal mengambil data penghuni');
     }
   }
+
+  Future<bool> tambahPenghuni({
+  required String nama,
+  required String noHp,
+  required String nomorKamar,
+  required String tanggalMasuk,
+  String? email
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/penghuni'), // ganti sesuai endpoint backend kamu
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'nama': nama,
+          'no_hp': noHp,
+          'nomor_kamar': nomorKamar,
+          'tanggal_masuk': tanggalMasuk,
+          'email': email,
+        }),
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('Error tambah penghuni: $e');
+      return false;
+    }
+  }
 }
+

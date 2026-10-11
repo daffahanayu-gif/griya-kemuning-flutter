@@ -3,10 +3,6 @@ import 'home_page.dart';
 import 'login_page.dart';
 import '../public/landing_page.dart'; 
 
-// ===========================================================================
-// 1. login_page.dart
-// ===========================================================================
-
 class LoginPage extends StatefulWidget {
   static String tag = 'login-page';
 
@@ -17,8 +13,17 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _emailController = TextEditingController(text: 'adminkos@gmail.com');
-  final _passwordController = TextEditingController(text: 'admin123');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _isPasswordVisible = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,7 +61,7 @@ class _LoginPageState extends State<LoginPage> {
                   const CircleAvatar(
                     radius: 40.0,
                     backgroundColor: Colors.transparent,
-                    backgroundImage: AssetImage('assets/logo_gk2.png'), // Sesuaikan nama aset
+                    backgroundImage: AssetImage('assets/logo_gk2.png'),
                   ),
                   const SizedBox(height: 12.0),
                   const Text(
@@ -74,45 +79,65 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 32.0),
 
-                  // Field Email
-                  TextFormField(
+                  // TextField Email
+                  TextField(
                     controller: _emailController,
+                    keyboardType: TextInputType.emailAddress,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Email',
                       labelStyle: const TextStyle(color: Colors.white70),
+                      hintText: 'Masukkan email admin',
+                      hintStyle: const TextStyle(color: Colors.white38),
                       prefixIcon: const Icon(Icons.email, color: Color(0xFFD4AF37)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
+                        borderRadius: BorderRadius.circular(10),
                         borderSide: const BorderSide(color: Colors.white24),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
+                        borderRadius: BorderRadius.circular(10),
                         borderSide: const BorderSide(color: Color(0xFFD4AF37)),
                       ),
                     ),
-                  ),
+                  ), // <-- Tanpa titik koma di sini
                   const SizedBox(height: 16.0),
 
-                  // Field Password
-                  TextFormField(
+                  // TextField Password
+                  TextField(
                     controller: _passwordController,
-                    obscureText: true,
+                    obscureText: !_isPasswordVisible,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Password',
                       labelStyle: const TextStyle(color: Colors.white70),
                       prefixIcon: const Icon(Icons.lock, color: Color(0xFFD4AF37)),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                          color: Colors.grey,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
+                        borderRadius: BorderRadius.circular(10),
                         borderSide: const BorderSide(color: Colors.white24),
                       ),
                       focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12.0),
+                        borderRadius: BorderRadius.circular(10),
                         borderSide: const BorderSide(color: Color(0xFFD4AF37)),
                       ),
                     ),
-                  ),
+                  ), // <-- Tanpa titik koma di sini
                   const SizedBox(height: 24.0),
 
                   // Tombol Login
@@ -121,16 +146,12 @@ class _LoginPageState extends State<LoginPage> {
                     height: 48.0,
                     child: ElevatedButton(
                       onPressed: () {
-                        // 1. Ambil teks dari controller dan bersihkan spasi
                         String email = _emailController.text.trim();
                         String password = _passwordController.text.trim();
 
-                        // 2. Cek validasi email & password
                         if (email == 'adminkos@gmail.com' && password == 'admin123') {
-                          // Jika BENAR -> Pindah ke HomePage
                           Navigator.of(context).pushReplacementNamed(HomePage.tag);
                         } else {
-                          // Jika SALAH -> Munculkan notifikasi kesalahan
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: const Row(
@@ -177,7 +198,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Tuliskan tombol Kembali ke Utama
+                  // Tombol Kembali
                   TextButton.icon(
                     onPressed: () {
                       Navigator.pushAndRemoveUntil(
@@ -189,7 +210,7 @@ class _LoginPageState extends State<LoginPage> {
                     icon: const Icon(
                       Icons.arrow_back_rounded,
                       size: 16,
-                      color: Color(0xFFB5945B), // Warna emas khas Griya Kemuning
+                      color: Color(0xFFB5945B),
                     ),
                     label: const Text(
                       'Kembali ke Halaman Utama',
