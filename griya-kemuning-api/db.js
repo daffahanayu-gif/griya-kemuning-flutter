@@ -1,14 +1,11 @@
 const { Pool } = require('pg');
 
-// Gunakan HANYA DATABASE_URL_CUSTOM agar tidak bentrok dengan variabel integrasi Vercel
-const connectionString = process.env.DATABASE_URL_CUSTOM;
-
-if (!connectionString) {
-  console.error("DATABASE_URL_CUSTOM belum diatur di Vercel!");
-}
-
 const pool = new Pool({
-  connectionString: connectionString,
+  host: process.env.DB_HOST_CUSTOM || 'aws-0-ap-northeast-1.pooler.supabase.com',
+  user: process.env.DB_USER_CUSTOM || 'postgres.fvhwneblamhuwcvxjtqr',
+  password: process.env.DB_PASSWORD_CUSTOM,
+  database: 'postgres',
+  port: 6543,
   ssl: {
     rejectUnauthorized: false
   }
