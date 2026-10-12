@@ -6,7 +6,9 @@ const connectionString = process.env.POSTGRES_URL || process.env.SUPABASE_DATABA
 const pool = connectionString
   ? new Pool({
       connectionString,
-      ssl: { rejectUnauthorized: false }
+      ssl: {
+        rejectUnauthorized: false
+      }
     })
   : new Pool({
       host: process.env.POSTGRES_HOST || process.env.DB_HOST,
@@ -14,7 +16,9 @@ const pool = connectionString
       password: process.env.POSTGRES_PASSWORD || process.env.DB_PASSWORD,
       database: process.env.POSTGRES_DATABASE || process.env.DB_NAME,
       port: process.env.POSTGRES_PORT || process.env.DB_PORT || 5432,
-      ssl: { rejectUnauthorized: false }
+      ssl: {
+        rejectUnauthorized: false
+      }
     });
 
 module.exports = pool;
