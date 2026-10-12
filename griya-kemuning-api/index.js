@@ -11,8 +11,8 @@ app.use(express.json());
 // 1. Endpoint Get Semua Kamar
 app.get('/api/kamar', async (req, res) => {
   try {
-    const [results] = await db.query('SELECT * FROM kamar');
-    res.json({ success: true, data: results });
+    const result = await db.query('SELECT * FROM kamar');
+    res.json({ success: true, data: result.rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -21,9 +21,8 @@ app.get('/api/kamar', async (req, res) => {
 // Endpoint Get Semua Data Penghuni / Reservasi
 app.get('/api/penghuni', async (req, res) => {
   try {
-    const [results] = await db.query('SELECT * FROM penghuni ORDER BY id DESC');
-    // Gantilah baris 25 di index.js menjadi seperti ini:
-    res.json(results);
+    const result = await db.query('SELECT * FROM penghuni ORDER BY id DESC');
+    res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -44,8 +43,8 @@ app.get('/api/penghuni-kamar', async (req, res) => {
     LEFT JOIN penghuni p ON k.id = p.id_kamar
   `;
   try {
-    const [results] = await db.query(sql);
-    res.json({ success: true, data: results });
+    const result = await db.query(sql);
+    res.json({ success: true, data: result.rows });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -54,11 +53,11 @@ app.get('/api/penghuni-kamar', async (req, res) => {
 // 3. Endpoint Login Admin
 app.post('/api/admin/login', async (req, res) => {
   const { email, password } = req.body;
-  const sql = 'SELECT * FROM admin WHERE email = ? AND password = ?';
+  const sql = 'SELECT * FROM admin WHERE email = $1 AND password = $2';
   try {
-    const [results] = await db.query(sql, [email, password]);
-    if (results.length > 0) {
-      res.json({ success: true, message: 'Login Berhasil', admin: results[0] });
+    const result = await db.query(sql, [email, password]);
+    if (result.rows.length > 0) {
+      res.json({ success: true, message: 'Login Berhasil', admin: result.rows[0] });
     } else {
       res.status(401).json({ success: false, message: 'Email atau password salah' });
     }
@@ -87,31 +86,31 @@ app.post('/api/penghuni', async (req, res) => {
 
     const cleanNomor = nomor_kamar.replace(/\s*\(.*\)$/, '').trim();
 
-    let [kamarResult] = await db.query('SELECT id FROM kamar WHERE nomor = ?', [cleanNomor]);
+    let kamarResult = await db.query('SELECT id FROM kamar WHERE nomor = $1', [cleanNomor]);
     
-    if (!kamarResult || kamarResult.length === 0) {
+    if (!kamarResult.rows || kamarResult.rows.length === 0) {
       const angkaKamar = cleanNomor.replace(/[^0-9]/g, '');
-      [kamarResult] = await db.query(
-        'SELECT id FROM kamar WHERE nomor = ? OR nomor = ?', 
+      kamarResult = await db.query(
+        'SELECT id FROM kamar WHERE nomor = $1 OR nomor = $2', 
         [angkaKamar, `Kamar ${angkaKamar}`]
       );
     }
 
-    if (!kamarResult || kamarResult.length === 0) {
+    if (!kamarResult.rows || kamarResult.rows.length === 0) {
       return res.status(400).json({ 
         success: false, 
         message: `Kamar '${cleanNomor}' tidak ditemukan` 
       });
     }
 
-    const idKamar = kamarResult[0].id;
+    const idKamar = kamarResult.rows[0].id;
 
     await db.query(
-      'INSERT INTO penghuni (id_kamar, nama, no_hp, email, tanggal_masuk, status_reservasi) VALUES (?, ?, ?, ?, ?, ?)',
+      'INSERT INTO penghuni (id_kamar, nama, no_hp, email, tanggal_masuk, status_reservasi) VALUES ($1, $2, $3, $4, $5, $6)',
       [idKamar, nama, no_hp, email, tanggal_masuk, 'Pending']
     );
 
-    await db.query('UPDATE kamar SET status = ? WHERE id = ?', ['Pending', idKamar]);
+    await db.query('UPDATE kamar SET status = $1 WHERE id = $2', ['Pending', idKamar]);
 
     console.log(`✅ Reservasi Pending Berhasil: ${nama} - Kamar ID: ${idKamar}`);
     return res.status(200).json({ 
@@ -126,60 +125,45 @@ app.post('/api/penghuni', async (req, res) => {
 });
 
 // 1. ENDPOINT MENYETUJUI RESERVASI (ACC)
-app.put('/api/reservasi/setujui/:id', (req, res) => {
+app.put('/api/reservasi/setujui/:id', async (req, res) => {
   const { id } = req.params;
 
-  // Cari dulu id_kamar dari reservasi yang mau disetujui
-  const getPenghuniQuery = 'SELECT id_kamar FROM penghuni WHERE id = ?';
+  try {
+    const getPenghuni = await db.query('SELECT id_kamar FROM penghuni WHERE id = $1', [id]);
+    if (getPenghuni.rows.length === 0) {
+      return res.status(404).json({ message: 'Data tidak ditemukan' });
+    }
 
-  db.query(getPenghuniQuery, [id], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (results.length === 0) return res.status(404).json({ message: 'Data tidak ditemukan' });
+    const idKamar = getPenghuni.rows[0].id_kamar;
 
-    const idKamar = results[0].id_kamar;
+    await db.query("UPDATE penghuni SET status_reservasi = 'Disetujui' WHERE id = $1", [id]);
+    await db.query("UPDATE kamar SET status = 'Terisi' WHERE id = $1", [idKamar]);
 
-    // Update status reservasi jadi 'Disetujui' & status kamar jadi 'Terisi'
-    const updatePenghuni = 'UPDATE penghuni SET status_reservasi = "Disetujui" WHERE id = ?';
-    const updateKamar = 'UPDATE kamar SET status = "Terisi" WHERE id = ?';
-
-    db.query(updatePenghuni, [id], (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-
-      db.query(updateKamar, [idKamar], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-
-        res.json({ message: 'Reservasi berhasil disetujui dan kamar resmi terisi!' });
-      });
-    });
-  });
+    res.json({ message: 'Reservasi berhasil disetujui dan kamar resmi terisi!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // 2. ENDPOINT MEMBATALKAN RESERVASI (CANCEL)
-app.put('/api/reservasi/batal/:id', (req, res) => {
+app.put('/api/reservasi/batal/:id', async (req, res) => {
   const { id } = req.params;
 
-  const getPenghuniQuery = 'SELECT id_kamar FROM penghuni WHERE id = ?';
+  try {
+    const getPenghuni = await db.query('SELECT id_kamar FROM penghuni WHERE id = $1', [id]);
+    if (getPenghuni.rows.length === 0) {
+      return res.status(404).json({ message: 'Data tidak ditemukan' });
+    }
 
-  db.query(getPenghuniQuery, [id], (err, results) => {
-    if (err) return res.status(500).json({ error: err.message });
-    if (results.length === 0) return res.status(404).json({ message: 'Data tidak ditemukan' });
+    const idKamar = getPenghuni.rows[0].id_kamar;
 
-    const idKamar = results[0].id_kamar;
+    await db.query("UPDATE penghuni SET status_reservasi = 'Batal' WHERE id = $1", [id]);
+    await db.query("UPDATE kamar SET status = 'Tersedia' WHERE id = $1", [idKamar]);
 
-    // Update status reservasi jadi 'Batal' & kembalikan status kamar jadi 'Tersedia'
-    const updatePenghuni = 'UPDATE penghuni SET status_reservasi = "Batal" WHERE id = ?';
-    const updateKamar = 'UPDATE kamar SET status = "Tersedia" WHERE id = ?';
-
-    db.query(updatePenghuni, [id], (err) => {
-      if (err) return res.status(500).json({ error: err.message });
-
-      db.query(updateKamar, [idKamar], (err) => {
-        if (err) return res.status(500).json({ error: err.message });
-
-        res.json({ message: 'Reservasi dibatalkan dan kamar kembali tersedia!' });
-      });
-    });
-  });
+    res.json({ message: 'Reservasi dibatalkan dan kamar kembali tersedia!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Jalankan Server
