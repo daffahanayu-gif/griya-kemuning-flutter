@@ -117,6 +117,8 @@ class _LandingPageState extends State<LandingPage> {
                         ],
                       ),
                       const SizedBox(height: 24),
+                      const Text('LOKASI KAMI', style: TextStyle(color: Color(0xFFB9935A), fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 1)),
+                      const SizedBox(height: 10),
                       const GoogleMapFooter(),
                       const SizedBox(height: 30),
                       const Divider(color: Colors.white12),
