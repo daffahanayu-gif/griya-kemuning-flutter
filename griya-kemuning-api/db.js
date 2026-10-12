@@ -1,7 +1,12 @@
 const { Pool } = require('pg');
 
-// Menggunakan connectionString utuh dari Vercel/Supabase Integration
-const connectionString = process.env.POSTGRES_URL || process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+// Ambil URL koneksi
+let connectionString = process.env.POSTGRES_URL || process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
+
+// Hapus parameter sslmode bawaan jika ada agar tidak bentrok
+if (connectionString) {
+  connectionString = connectionString.replace('?sslmode=require', '').replace('&sslmode=require', '');
+}
 
 const pool = connectionString
   ? new Pool({
