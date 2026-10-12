@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "build:web": "flutter build web --release",
+  "deploy:pages": "npx wrangler pages deploy build/web --project-name=griya-kemuning",
+  "deploy:worker": "npx wrangler deploy",
+  "deploy": "npm run deploy:pages && npm run deploy:worker"
   },
   "keywords": [],
   "author": "",
