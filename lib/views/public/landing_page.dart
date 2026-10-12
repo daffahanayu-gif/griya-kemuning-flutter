@@ -4,6 +4,8 @@ import '../../widgets/signature_room.dart';
 import '../../widgets/facility_card.dart';
 import '../../widgets/reservation_form.dart';
 import '../admin/login_page.dart';
+import 'dart:ui_web' as ui_web;
+import 'package:universal_html/html.dart' as html;
 
 class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
@@ -114,6 +116,8 @@ class _LandingPageState extends State<LandingPage> {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 24),
+                      const GoogleMapFooter(),
                       const SizedBox(height: 30),
                       const Divider(color: Colors.white12),
                       const SizedBox(height: 12),
@@ -126,6 +130,42 @@ class _LandingPageState extends State<LandingPage> {
           ],
         ),
       ),
+    );
+  }
+}
+class GoogleMapFooter extends StatefulWidget {
+  const GoogleMapFooter({super.key});
+
+  @override
+  State<GoogleMapFooter> createState() => _GoogleMapFooterState();
+}
+
+class _GoogleMapFooterState extends State<GoogleMapFooter> {
+  final String viewType = 'google-maps-griya-kemuning';
+
+  @override
+  void initState() {
+    super.initState();
+    ui_web.platformViewRegistry.registerViewFactory(
+      viewType,
+      (int viewId) => html.IFrameElement()
+        ..src = 'https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3954.2!2d111.65!3d-7.55!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e79bf0000000001%3A0x0!2sJl.%20Kemuning%20No.16%2C%20Bangunsari%2C%20Kec.%20Mejayan%2C%20Kabupaten%20Madiun!5e0!3m2!1sid!2sid!4v1700000000000!5m2!1sid!2sid'
+        ..style.border = 'none'
+        ..style.width = '100%'
+        ..style.height = '100%',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 250,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: HtmlElementView(viewType: viewType),
     );
   }
 }
