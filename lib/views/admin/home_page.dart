@@ -406,18 +406,35 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
                             const SizedBox(width: 8), // Jarak antar tombol
 
                             // 2. Tombol Tandai Lunas (BARU)
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.blue.withOpacity(0.2),
-                                foregroundColor: Colors.blueAccent,
-                                elevation: 0,
-                              ),
-                              icon: const Icon(Icons.check_circle_outline, size: 16),
-                              label: const Text('Tandai Lunas'),
-                              onPressed: () {
-                                _markAsPaid(item['id'] ?? item['id_pembayaran'] ?? item['id_kamar']);
-                              },
+                           // ==============================================================================
+                          // TOMBOL TANDAI LUNAS (DENGAN SAFE FALLBACK ID)
+                          // ==============================================================================
+                          ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue.withOpacity(0.2),
+                              foregroundColor: Colors.blueAccent,
+                              elevation: 0,
                             ),
+                            icon: const Icon(Icons.check_circle_outline, size: 16),
+                            label: const Text('Tandai Lunas'),
+                            onPressed: () {
+                              // Ambil ID secara hierarki agar tidak bernilai null
+                              final idPembayaran = item['id_pembayaran'] ?? item['id'] ?? item['pembayaran_id'];
+
+                              if (idPembayaran == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Error: ID Pembayaran tidak ditemukan pada data ini'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              // Panggil fungsi API jika ID valid
+                              _markAsPaid(idPembayaran);
+                            },
+                          )
                           ],
                         ),
                       ),
