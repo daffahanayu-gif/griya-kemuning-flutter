@@ -243,7 +243,7 @@ void _showKetersediaanDialog(BuildContext context) {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Hunian eksklusif dengan sentuhan minimalis modern bernuansa resort mewah Bali.',
+                    'Kawasan Hunian Co-Living Eksklusif yang tenang, aman, dan berkelas dengan standar kenyamanan modern.',
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white70, fontSize: 12),
                   ),

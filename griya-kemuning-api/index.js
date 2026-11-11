@@ -166,6 +166,23 @@ app.put('/api/reservasi/batal/:id', async (req, res) => {
   }
 });
 
+// PUT: Mengubah status pembayaran menjadi lunas
+app.put('/api/pembayaran/:id/lunas', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { data, error } = await supabase
+      .from('pembayaran')
+      .update({ status: 'lunas' })
+      .eq('id', id)
+      .select();
+
+    if (error) throw error;
+    res.json({ message: 'Pembayaran berhasil diubah menjadi Lunas', data });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Jalankan Server
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server API Griya Kemuning berjalan di port ${PORT}`);

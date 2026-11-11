@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '/widgets/room_card.dart';
 import '../../service/api_service.dart';
 import '/views/admin/reservasi.dart'; // Sesuaikan lokasi path file reservasi_page.dart kamu
+import 'package:http/http.dart' as http; // Pastikan package http sudah di-import
 
 // 1. WIDGET UTAMA (Membungkus Bottom Navigation Bar)
 class HomePage extends StatefulWidget {
@@ -148,7 +149,47 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
     );
   }
 
-  @override
+    Future<void> _markAsPaid(int pembayaranId) async {
+    // 1. Menyusun URL endpoint backend Vercel dengan ID pembayaran yang dipilih
+    final url = Uri.parse('https://griya-kemuning-flutter.vercel.app/api/pembayaran/$pembayaranId/lunas');
+
+    try {
+      // 2. Mengirim request HTTP PUT ke backend Express.js
+      final response = await http.put(url);
+
+      // 3. Jika backend merespon HTTP status 200 (Sukses)
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        
+        // Tampilkan notifikasi toast/snackbar hijau
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Status pembayaran berhasil diubah ke Lunas!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Refresh tampilan UI agar data status terbaru langsung dirender
+        setState(() {
+          // Panggil fungsi fetch/reload data pembayaran kamu di sini jika ada
+        });
+      } else {
+        throw Exception('Gagal memperbarui status pembayaran');
+      }
+    } catch (e) {
+      if (!mounted) return;
+      
+      // Tampilkan notifikasi snackbar merah jika terjadi ralat koneksi/server
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+ @override
   Widget build(BuildContext context) {
     double screenWidth = MediaQuery.of(context).size.width;
     bool isDesktop = screenWidth > 768;
@@ -276,13 +317,15 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
               },
             ),
 
+            const SizedBox(height: 25),
+
             // ================= 3. DAFTAR TAGIHAN & WA =================
             const Text(
               'Daftar Tagihan & Jatuh Tempo',
               style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-           FutureBuilder<List<dynamic>>(
+            FutureBuilder<List<dynamic>>(
               future: ApiService.fetchPenghuniKamar(), // Pastikan method ini ada di ApiService
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -327,18 +370,45 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
                           'Nominal: Rp ${item['harga']} | Jatuh Tempo: Tanggal 10',
                           style: const TextStyle(color: Colors.white54, fontSize: 12),
                         ),
-                        trailing: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green.withOpacity(0.2),
-                            foregroundColor: Colors.green,
-                            elevation: 0,
-                          ),
-                          icon: const Icon(Icons.chat, size: 16),
-                          label: const Text('Kirim WA'),
-                          onPressed: () => _showWADialog(
-                            item['nama_penghuni'],
-                            item['nomor_kamar'],
-                          ),
+
+                        // ==============================================================================
+                        // 📍 POSISI TOMBOL ACTION (KIRIM WA & TANDAI LUNAS)
+                        // ==============================================================================
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min, // Agar Row menyesuaikan lebar tombol
+                          children: [
+                            // 1. Tombol Kirim WA
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green.withOpacity(0.2),
+                                foregroundColor: Colors.green,
+                                elevation: 0,
+                              ),
+                              icon: const Icon(Icons.chat, size: 16),
+                              label: const Text('Kirim WA'),
+                              onPressed: () => _showWADialog(
+                                item['nama_penghuni'],
+                                item['nomor_kamar'],
+                              ),
+                            ),
+
+                            const SizedBox(width: 8), // Jarak antar tombol
+
+                            // 2. Tombol Tandai Lunas (BARU)
+                            ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.blue.withOpacity(0.2),
+                                foregroundColor: Colors.blueAccent,
+                                elevation: 0,
+                              ),
+                              icon: const Icon(Icons.check_circle_outline, size: 16),
+                              label: const Text('Tandai Lunas'),
+                              onPressed: () {
+                                // Panggil fungsi API _markAsPaid dengan mengirim ID pembayaran/item
+                                _markAsPaid(item['pembayaran_id'] ?? item['id']);
+                              },
+                            ),
+                          ],
                         ),
                       ),
                     );
