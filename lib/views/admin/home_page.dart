@@ -149,7 +149,18 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
     );
   }
 
-    Future<void> _markAsPaid(int pembayaranId) async {
+    Future<void> _markAsPaid(dynamic pembayaranId) async {
+    // Cek jika ID bernilai null / kosong
+    if (pembayaranId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('ID Pembayaran tidak ditemukan!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
     // 1. Menyusun URL endpoint backend Vercel dengan ID pembayaran yang dipilih
     final url = Uri.parse('https://griya-kemuning-flutter.vercel.app/api/pembayaran/$pembayaranId/lunas');
 
@@ -404,8 +415,7 @@ class _HomeDashboardContentState extends State<HomeDashboardContent> {
                               icon: const Icon(Icons.check_circle_outline, size: 16),
                               label: const Text('Tandai Lunas'),
                               onPressed: () {
-                                // Panggil fungsi API _markAsPaid dengan mengirim ID pembayaran/item
-                                _markAsPaid(item['pembayaran_id'] ?? item['id']);
+                                _markAsPaid(item['id'] ?? item['id_pembayaran'] ?? item['id_kamar']);
                               },
                             ),
                           ],
